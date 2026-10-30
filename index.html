@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14202e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Floorbal">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Floorbal Analist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#eef2f6; --surface:#ffffff; --line:#cfd8e3; --fg:#14202e; --muted:#5a6878;
+  --us:#1557d6; --us-soft:#dce7fb; --them:#c2410c; --them-soft:#fbe4d8;
+  --rink:#2f6fb5; --rink-floor:#e4edf7; --ok:#15803d; --warn:#b45309; --rec:#dc2626;
+  --display:"Saira Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0c141e; --surface:#142130; --line:#26384c; --fg:#e6edf5; --muted:#91a2b5;
+  --us:#5b93ff; --us-soft:#18305a; --them:#ff8a4c; --them-soft:#4a2414;
+  --rink:#6aa4e6; --rink-floor:#16283b; --ok:#4ade80; --warn:#fbbf24; --rec:#f87171; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{background:var(--bg);margin:0}
+body{color:var(--fg);font:16px/1.45 var(--body);padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,label:focus-visible{outline:3px solid var(--us);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+.board{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.tname{font:700 1.1rem/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tname.us{color:var(--us)} .tname.them{color:var(--them);text-align:right}
+.score{font:800 2.3rem/1 var(--display);display:flex;gap:10px;align-items:center}
+.score span:nth-child(2){color:var(--muted);font-size:1.5rem}
+.clockrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.per{font:700 .85rem var(--display);letter-spacing:.08em;background:var(--fg);color:var(--bg);padding:3px 9px;border-radius:6px}
+.clock{font:700 1.6rem/1 var(--mono)}
+.clock.over{color:var(--warn)}
+.ctl{margin-left:auto;display:flex;gap:8px}
+.btn{font:600 .95rem var(--body);padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.small{padding:6px 10px;font-size:.85rem}
+
+.cam{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/9;max-width:100%}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.camoff{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#cfd8e3;text-align:center;padding:16px;font-size:.95rem}
+.recbadge{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.6);color:#fff;font:700 .8rem var(--mono);padding:4px 9px;border-radius:999px}
+.recbadge i{width:9px;height:9px;border-radius:50%;background:#ef4444}
+.recbadge.live i{animation:blink 1s steps(2) infinite}
+.recbadge.paused i{background:#fbbf24}
+@keyframes blink{50%{opacity:.2}}
+.flip{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:5px 10px;font-size:.8rem}
+
+.banner{font-size:.9rem;color:var(--muted);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner b{color:var(--fg)}
+
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.tabs button{font:700 1rem var(--display);letter-spacing:.06em;text-transform:uppercase;padding:8px 0;border-radius:9px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.colhead{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col.us .colhead{color:var(--us)} .col.them .colhead{color:var(--them)}
+.ev{min-height:56px;border-radius:12px;font:700 1.12rem/1.1 var(--display);letter-spacing:.02em;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 12px;border:2px solid transparent;transition:transform .08s;text-align:left}
+.ev small{font:500 .85rem var(--mono);opacity:.8}
+.col.us .ev{background:var(--us-soft);color:var(--us)}
+.col.them .ev{background:var(--them-soft);color:var(--them)}
+.ev.goal,.ev.flash{border-color:currentColor}
+.ev:active{transform:scale(.97)}
+
+.log,.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px 0}
+.card{padding-bottom:12px}
+.log h3,.card h3{font:700 .8rem var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:6px 14px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:.95rem}
+.row + .row{border-top:1px solid var(--line)}
+.row .t{font:500 .85rem var(--mono);color:var(--muted);flex:none}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.us{background:var(--us)} .dot.them{background:var(--them)}
+.row .what{flex:1;min-width:0}
+.row .what em{font-style:normal;color:var(--muted)}
+.x{color:var(--muted);padding:2px 6px;font-size:1.1rem}
+.empty{color:var(--muted);padding:8px 14px;font-size:.95rem}
+.row.click{cursor:pointer}
+.row.click:hover{background:var(--bg)}
+.row.novid{opacity:.55}
+
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -12px 30px rgba(0,0,0,.2);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:20}
+.sheet .in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.sheet .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet .top b{font:700 1.1rem var(--display);letter-spacing:.03em}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--fg);transform-origin:left}
+
+.rink{width:100%;height:auto;display:block}
+.rink .floor{fill:var(--rink-floor);stroke:var(--rink);stroke-width:3}
+.rink .ln{stroke:var(--rink);stroke-width:1.5;fill:none}
+.rink .grid{stroke:var(--rink);stroke-width:1;stroke-dasharray:4 5;opacity:.55;fill:none}
+.rink .lbl{fill:var(--muted);font:600 10px var(--body)}
+.rink .cell{fill:transparent;cursor:pointer}
+.rink .cell:hover,.rink .cell:focus{fill:var(--fg);fill-opacity:.08;outline:none}
+.rink .cnt{font:800 22px var(--display);fill:var(--fg);text-anchor:middle;dominant-baseline:central}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px}
+.chip{font:600 .85rem var(--body);padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{padding:7px 14px;text-align:left}
+td.n,th.n{text-align:right;font:600 1rem var(--mono);width:90px}
+th{font:700 .75rem var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+th.us{color:var(--us)} th.them{color:var(--them)}
+tbody tr{border-top:1px solid var(--line)}
+td.n.lead{color:var(--fg)} td.n.trail{color:var(--muted)}
+.ins{display:flex;flex-direction:column;gap:8px;padding:0 14px;margin:0;list-style:none}
+.ins li{display:flex;gap:10px;align-items:flex-start;font-size:.98rem}
+.ins li::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--fg);margin-top:.5em;flex:none}
+.ins li.good::before{background:var(--ok)} .ins li.bad::before{background:var(--them)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px}
+.note{font-size:.85rem;color:var(--muted);padding:0 14px}
+pre.copy{white-space:pre-wrap;font:.85rem/1.4 var(--mono);margin:0 14px;padding:10px;background:var(--bg);border-radius:8px}
+
+#revVid{width:100%;max-width:100%;border-radius:10px;background:#000;display:block}
+.vids{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 14px}
+.vids label{border:1px solid var(--line);border-radius:10px;padding:8px 4px;font-size:.85rem;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;text-align:center}
+.vids b{font:700 .9rem var(--display);letter-spacing:.06em}
+.vids span{font-size:.78rem;color:var(--muted)}
+.vids span.ok{color:var(--ok)}
+.newpanel{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.newpanel input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
+.warn{color:var(--warn);font-size:.9rem}
+.newpanel textarea{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%;min-height:70px;resize:vertical}
+.hint{font-size:.85rem;color:var(--muted)}
+.sub{font:700 .78rem var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nums{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.nb{min-width:46px;height:42px;padding:0 8px;border-radius:10px;border:1px solid var(--line);font:700 1.05rem var(--mono);background:var(--bg);color:var(--fg)}
+.nb[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.nums input{width:72px;height:42px;border-radius:10px;border:1px dashed var(--line);background:var(--bg);color:var(--fg);font:700 1rem var(--mono);text-align:center}
+.pl{font:700 .85rem var(--mono);color:var(--fg)}
+select{font:inherit;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.tblwrap{overflow-x:auto;max-width:100%}
+.wrap>*,section.wrap{min-width:0;max-width:100%}
+.ptbl td,.ptbl th{padding:6px 8px;white-space:nowrap}
+.ptbl td:first-child,.ptbl th:first-child{padding-left:14px}
+.ptbl td.n,.ptbl th.n{width:auto}
+.ptbl td:first-child{font:700 .95rem var(--mono)}
+.install,.savepanel{display:flex;flex-direction:column;gap:10px;border-radius:12px;padding:12px 14px;font-size:.95rem}
+.install{background:var(--us-soft);color:var(--fg)}
+.savepanel{background:var(--them-soft);color:var(--fg);border:2px solid var(--them)}
+.savepanel small{font-weight:500;opacity:.8}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:600;z-index:30;font-size:.9rem;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion:reduce){.ev{transition:none}.bar i{transition:none!important}.recbadge.live i{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="board" aria-label="Scorebord">
+    <div class="teams">
+      <div class="tname us">Wij</div>
+      <div class="score num"><span id="sUs">0</span><span>–</span><span id="sThem">0</span></div>
+      <div class="tname them" id="oppName">Tegenstander</div>
+    </div>
+    <div class="clockrow">
+      <span class="per" id="perLbl">P1</span>
+      <span class="clock num" id="clock">00:00</span>
+      <div class="ctl">
+        <button class="btn primary" id="playBtn">Start</button>
+        <button class="btn" id="endBtn">Einde periode</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="install" id="installHint" hidden>
+    <div><b>Zet Floorbal op je beginscherm.</b> Tik onderin Safari op het deelicoon en kies "Zet op beginscherm". Dan opent hij als app, schermvullend.</div>
+    <button class="btn small" id="installClose">Oké</button>
+  </div>
+  <div class="savepanel" id="savePanel" hidden>
+    <div><b>Video nog niet bewaard.</b> Bewaar hem in je Foto's voordat je de app sluit.</div>
+    <div class="actions" style="padding:0" id="saveBtns"></div>
+  </div>
+  <div class="banner" id="banner"></div>
+  <div class="newpanel" id="newPanel" hidden>
+    <label for="newOpp"><b>Tegen wie spelen jullie?</b></label>
+    <input id="newOpp" placeholder="Naam tegenstander" autocomplete="off">
+    <label for="newRoster"><b>Rugnummers van ons team</b></label>
+    <textarea id="newRoster" placeholder="Bijvoorbeeld: 3 Daan, 7 Sem, 9, 11 Lucas, 14"></textarea>
+    <div class="hint">Naam mag je weglaten. Nummers van de tegenstander voeg je tijdens de wedstrijd toe als ze opvallen.</div>
+    <div class="warn" id="newWarn" hidden></div>
+    <div class="actions" style="padding:0">
+      <button class="btn primary" id="newGo">Wedstrijd aanmaken</button>
+      <button class="btn" id="newCancel">Annuleren</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-live" aria-selected="true">Live</button>
+    <button role="tab" id="tab-rapport" aria-selected="false">Rapport</button>
+    <button role="tab" id="tab-terug" aria-selected="false">Terugkijken</button>
+  </div>
+
+  <!-- LIVE -->
+  <section id="v-live" class="wrap" style="gap:12px">
+    <div class="cam">
+      <video id="preview" muted playsinline autoplay></video>
+      <div class="camoff" id="camOff">
+        <span id="camMsg">Camera staat uit</span>
+        <button class="btn primary" id="camBtn">Camera aanzetten</button>
+      </div>
+      <div class="recbadge" id="recBadge" hidden><i></i><span id="recTxt">REC</span></div>
+      <button class="flip" id="flipBtn" hidden>Wissel camera</button>
+    </div>
+    <div class="cols" id="cols"></div>
+    <div class="log">
+      <h3>Laatst gemarkeerd</h3>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- RAPPORT -->
+  <section id="v-rapport" class="wrap" style="gap:12px" hidden>
+    <div class="chips" id="perChips" style="padding:0"></div>
+    <div class="card">
+      <h3>Wat valt op</h3>
+      <ul class="ins" id="ins"></ul>
+    </div>
+    <div class="card">
+      <h3>Cijfers</h3>
+      <table class="num">
+        <thead><tr><th></th><th class="n us">Wij</th><th class="n them" id="thOpp">Zij</th></tr></thead>
+        <tbody id="stats"></tbody>
+      </table>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Per speler</h3>
+      <div class="chips" id="plChips"></div>
+      <div class="tblwrap"><table class="num ptbl"><thead id="plHead"></thead><tbody id="plBody"></tbody></table></div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Waar op het veld</h3>
+      <div class="chips" id="heatChips"></div>
+      <div style="padding:0 14px" id="heat"></div>
+      <div class="note">Wij spelen naar rechts. Links en rechts gezien in onze aanvalsrichting.</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Naar de coach</h3>
+      <div class="note">Kopieer het rapport en plak het in de chat met Claude voor drie korte tips, of stuur het direct naar de coach.</div>
+      <div class="actions"><button class="btn primary" id="copyBtn">Kopieer rapport</button></div>
+      <pre class="copy" id="copyBox" hidden></pre>
+    </div>
+  </section>
+
+  <!-- TERUGKIJKEN -->
+  <section id="v-terug" class="wrap" style="gap:12px" hidden>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Video</h3>
+      <div class="note">Opnames van deze sessie staan al klaar. Anders kies je per periode het opgeslagen videobestand.</div>
+      <div class="vids" id="vids"></div>
+      <div style="padding:0 14px"><video id="revVid" controls playsinline hidden></video></div>
+    </div>
+    <div class="chips" id="revChips" style="padding:0"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="sub" for="revPl">Speler</label><select id="revPl"></select></div>
+    <div class="log"><div id="revList"></div></div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="in">
+    <div class="top"><b id="sheetTitle">Waar?</b><button class="btn small" id="skipZone">Overslaan</button></div>
+    <div class="bar"><i id="sheetBar"></i></div>
+    <div class="sub">Wie? <span style="text-transform:none;letter-spacing:0;font-weight:500">(eerst nummer, dan plek)</span></div>
+    <div class="nums" id="sheetNums"></div>
+    <div id="sheetRink"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const PER_LEN = 1200, PRE_ROLL = 6;
+const EV = [
+  {k:'shot', l:'Schot'}, {k:'goal', l:'Doelpunt'}, {k:'win', l:'Balverovering'},
+  {k:'loss', l:'Balverlies'}, {k:'break',l:'Door de druk'}, {k:'pen', l:'Straf'}
+];
+const EVL = Object.fromEntries(EV.map(e=>[e.k,e.l]));
+const LANES = ['links','midden','rechts'];
+const THIRDS = ['eigen derde','middenveld','aanvalsderde'];
+const zoneName = z => z==null ? '' : `${THIRDS[z%3]} ${LANES[Math.floor(z/3)]}`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = s => { s=Math.max(0,Math.floor(s)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
+
+/* ---------- voorbeeldwedstrijd ---------- */
+function sampleMatch(){
+  let seed=11; const r=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
+  const Z=(lane,third)=>lane*3+third;
+  const tpl=[
+    ['us','win',[Z(1,2),Z(0,2),Z(1,1),Z(2,2),Z(1,2)],4], ['us','shot',[Z(1,2),Z(0,2),Z(2,2),Z(1,2)],4],
+    ['us','loss',[Z(0,1),Z(0,1),Z(1,1),Z(0,0)],3], ['them','break',[Z(2,2),Z(2,1),Z(2,2),Z(1,1)],3],
+    ['them','shot',[Z(1,0),Z(2,0),Z(1,0)],3], ['them','win',[Z(0,1),Z(1,1)],2],
+    ['them','loss',[Z(1,2),Z(2,2)],2], ['us','break',[Z(0,0),Z(1,1)],1]];
+  const tot=tpl.reduce((a,t)=>a+t[3],0), ev=[];
+  for(let p=1;p<=3;p++){
+    for(let i=0;i<14;i++){
+      let x=r()*tot, t=tpl[0]; for(const c of tpl){ if((x-=c[3])<0){t=c;break;} }
+      ev.push({p,t:Math.floor(r()*1180)+10,team:t[0],type:t[1],zone:t[2][Math.floor(r()*t[2].length)]});
+    }
+    ev.push({p,t:950+Math.floor(r()*200),team:'them',type:'break',zone:Z(2,2)});
+  }
+  [[1,372,'us',Z(1,2)],[2,220,'us',Z(0,2)],[3,845,'us',Z(1,2)],[2,680,'them',Z(1,0)],[3,1050,'them',Z(2,0)],[3,1125,'them',Z(1,0)]]
+    .forEach(([p,t,team,zone])=>ev.push({p,t,team,type:'goal',zone}));
+  ev.push({p:2,t:900,team:'them',type:'pen',zone:null},{p:3,t:400,team:'us',type:'pen',zone:null});
+  const roster={us:[3,7,9,11,14,17,21,23,88],them:[5,10,14,19,22]};
+  const wUs=[1,4,3,2,4,2,1,2,1], wThem=[1,2,5,2,1];
+  const pickW=(arr,w)=>{ let x=r()*w.reduce((a,b)=>a+b,0); for(let i=0;i<arr.length;i++){ if((x-=w[i])<0) return arr[i]; } return arr[0]; };
+  ev.forEach(e=>{ if(r()<.85) e.pl=e.team==='us'?pickW(roster.us,wUs):pickW(roster.them,wThem); });
+  ev.sort((a,b)=>a.p-b.p||a.t-b.t).forEach((e,i)=>e.id=i+1);
+  return {opp:'FBC Voorbeeld',example:true,period:3,base:1200,running:false,startedAt:0,done:true,events:ev,nextId:ev.length+1,roster,names:{}};
+}
+
+/* ---------- state ---------- */
+const KEY='floorbal-analist-cam-v1';
+let M;
+try{ M=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+if(!M||!Array.isArray(M.events)) M=sampleMatch();
+M.running=false; // na herladen staat de opname nooit meer aan
+M.roster=M.roster||{us:[],them:[]}; M.names=M.names||{};
+const plName=(n,team='us')=>team==='us'&&M.names[n]?`#${n} ${M.names[n]}`:`#${n}`;
+const sortNums=a=>[...new Set(a)].sort((x,y)=>x-y);
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(M)); }catch(e){} }
+const elapsed=()=>M.base+(M.running?(Date.now()-M.startedAt)/1000:0);
+const videos={}; // periode -> blob-URL (alleen deze sessie)
+
+let tt; function toast(msg,ms=2000){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,ms); }
+
+/* ---------- camera + opname ---------- */
+let stream=null, recorder=null, chunks=[], facing='environment', mime='';
+function pickMime(){
+  if(!window.MediaRecorder) return null;
+  const opts=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  return opts.find(m=>MediaRecorder.isTypeSupported(m))||'';
+}
+async function startCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){ $('camMsg').textContent='Deze browser kan de camera niet gebruiken. Open het bestand in Chrome.'; return false; }
+  stopStream();
+  const video={facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}};
+  try{ stream=await navigator.mediaDevices.getUserMedia({video,audio:true}); }
+  catch(e){
+    try{ stream=await navigator.mediaDevices.getUserMedia({video,audio:false}); }
+    catch(e2){ $('camMsg').textContent=e2.name==='NotAllowedError'?'Geen toestemming voor de camera. Sta dit toe via het slotje in de adresbalk.':'Geen camera gevonden.'; return false; }
+  }
+  $('preview').srcObject=stream; $('camOff').hidden=true;
+  try{ const n=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput').length; $('flipBtn').hidden=n<2; }catch(_){}
+  return true;
+}
+function stopStream(){ stream?.getTracks().forEach(t=>t.stop()); stream=null; }
+$('camBtn').onclick=startCamera;
+$('flipBtn').onclick=async()=>{
+  if(recorder){ toast('Wisselen kan niet tijdens een opname'); return; }
+  facing=facing==='environment'?'user':'environment'; await startCamera();
+};
+function beginRecording(){
+  if(!stream) return;
+  mime=pickMime(); if(mime===null){ toast('Opnemen wordt niet ondersteund in deze browser'); return; }
+  chunks=[];
+  try{ recorder=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:1800000}:{videoBitsPerSecond:1800000}); }
+  catch(e){ recorder=new MediaRecorder(stream); }
+  recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  recorder.start(1000);
+}
+function finishRecording(p){
+  return new Promise(res=>{
+    if(!recorder){ res(); return; }
+    const r=recorder; recorder=null;
+    r.onstop=()=>{
+      const type=r.mimeType||mime||'video/webm';
+      const blob=new Blob(chunks,{type}); chunks=[];
+      if(blob.size){
+        const url=URL.createObjectURL(blob); videos[p]=url;
+        const ext=type.includes('mp4')?'mp4':'webm';
+        const safe=M.opp.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'tegenstander';
+        const d=new Date(), stamp=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        files[p]=new File([blob],`${stamp}_wij-vs-${safe}_P${p}.${ext}`,{type});
+        showSave();
+      }
+      res();
+    };
+    try{ r.stop(); }catch(_){ res(); }
+  });
+}
+function renderRec(){
+  const b=$('recBadge');
+  if(!recorder){ b.hidden=true; return; }
+  b.hidden=false; b.className='recbadge '+(recorder.state==='recording'?'live':'paused');
+  $('recTxt').textContent=recorder.state==='recording'?'REC':'PAUZE';
+}
+const files={}; // periode -> File, nog niet bewaard
+function showSave(){
+  const ps=Object.keys(files);
+  $('savePanel').hidden=!ps.length;
+  $('saveBtns').innerHTML=ps.map(p=>`<button class="btn primary" data-save="${p}">Bewaar video periode ${p} <small>(${(files[p].size/1048576).toFixed(0)} MB)</small></button>`).join('');
+}
+async function saveVideo(p){
+  const f=files[p]; if(!f) return;
+  if(navigator.canShare?.({files:[f]})){
+    try{ await navigator.share({files:[f]}); delete files[p]; showSave(); toast('Kies "Bewaar video" om hem in Foto\'s te zetten',3000); }
+    catch(e){ if(e.name!=='AbortError') toast('Bewaren lukte niet. Probeer het opnieuw.'); }
+  } else {
+    const a=document.createElement('a'); a.href=URL.createObjectURL(f); a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
+    delete files[p]; showSave(); toast('Video opgeslagen in Downloads');
+  }
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-save]'); if(b) saveVideo(b.dataset.save); });
+window.addEventListener('beforeunload',e=>{ if(recorder||Object.keys(files).length){ e.preventDefault(); e.returnValue=''; } });
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+if(isIOS&&!standalone) $('installHint').hidden=false;
+$('installClose').onclick=()=>{ $('installHint').hidden=true; };
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- veld ---------- */
+function rink(cells=''){
+  return `<svg class="rink" viewBox="0 0 400 210" role="img" aria-label="Floorbalveld, wij spelen naar rechts">
+    <rect class="floor" x="4" y="14" width="392" height="180" rx="30"/>
+    <line class="ln" x1="200" y1="14" x2="200" y2="194"/><circle class="ln" cx="200" cy="104" r="16"/>
+    <rect class="ln" x="22" y="84" width="22" height="40" rx="3"/><rect class="ln" x="356" y="84" width="22" height="40" rx="3"/>
+    <rect class="ln" x="22" y="94" width="5" height="20"/><rect class="ln" x="373" y="94" width="5" height="20"/>
+    <line class="grid" x1="134" y1="14" x2="134" y2="194"/><line class="grid" x1="266" y1="14" x2="266" y2="194"/>
+    <line class="grid" x1="4" y1="74" x2="396" y2="74"/><line class="grid" x1="4" y1="134" x2="396" y2="134"/>
+    ${cells}
+    <text class="lbl" x="8" y="9">Ons doel</text><text class="lbl" x="392" y="9" text-anchor="end">Aanval →</text>
+    <text class="lbl" x="8" y="206">Links = boven · rechts = onder</text>
+  </svg>`;
+}
+const cellBox=z=>{ const third=z%3, lane=Math.floor(z/3), xs=[4,134,266,396], ys=[14,74,134,194];
+  return {x:xs[third],y:ys[lane],w:xs[third+1]-xs[third],h:ys[lane+1]-ys[lane]}; };
+
+/* ---------- live ---------- */
+function buildCols(){
+  const col=(team,head)=>`<div class="col ${team}"><div class="colhead">${head}</div>${
+    EV.map(e=>`<button class="ev ${e.k==='goal'?'goal':''}" data-team="${team}" data-k="${e.k}">${e.l}<small class="num" data-c="${team}-${e.k}">0</small></button>`).join('')}</div>`;
+  $('cols').innerHTML=col('us','Wij')+col('them',esc(M.opp));
+}
+$('cols').addEventListener('click',ev=>{
+  const b=ev.target.closest('.ev'); if(!b) return;
+  if(M.example){ toast('Dit is de voorbeeldwedstrijd. Maak eerst een nieuwe aan.'); return; }
+  if(M.done){ toast('De wedstrijd is afgelopen'); return; }
+  const e={id:M.nextId++,p:M.period,t:Math.floor(elapsed()),team:b.dataset.team,type:b.dataset.k,zone:null};
+  M.events.push(e); save();
+  try{ navigator.vibrate&&navigator.vibrate(15); }catch(_){}
+  b.classList.add('flash'); setTimeout(()=>b.classList.remove('flash'),250);
+  renderAll();
+  if(e.type!=='pen') askZone(e);
+});
+let zoneTimer;
+const SHEET_MS=5000;
+function armTimer(ms){
+  clearTimeout(zoneTimer);
+  const bar=$('sheetBar'); bar.style.transition='none'; bar.style.transform='scaleX(1)';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{bar.style.transition=`transform ${ms}ms linear`; bar.style.transform='scaleX(0)';}));
+  zoneTimer=setTimeout(closeSheet,ms);
+}
+const sheetEvent=()=>M.events.find(x=>x.id==$('sheet').dataset.id);
+function renderSheetNums(){
+  const e=sheetEvent(); if(!e) return;
+  const nums=M.roster[e.team]||[];
+  $('sheetNums').innerHTML=nums.map(n=>`<button class="nb" data-n="${n}" aria-pressed="${e.pl===n}" title="${esc(plName(n,e.team))}">${n}</button>`).join('')
+    +`<input id="addNum" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="+ nr" aria-label="Ander rugnummer">`;
+}
+function askZone(e){
+  const cells=[...Array(9)].map((_,z)=>{const c=cellBox(z);return `<rect class="cell" tabindex="0" data-z="${z}" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}"><title>${zoneName(z)}</title></rect>`}).join('');
+  $('sheetRink').innerHTML=rink(cells);
+  $('sheetTitle').textContent=`${e.team==='us'?'Wij':M.opp} · ${EVL[e.type]}`;
+  $('sheet').hidden=false; $('sheet').dataset.id=e.id;
+  renderSheetNums(); armTimer(SHEET_MS);
+}
+function closeSheet(){ $('sheet').hidden=true; clearTimeout(zoneTimer); }
+function pickZone(z){ const e=sheetEvent(); if(e){ e.zone=z; save(); renderAll(); } closeSheet(); }
+function pickNum(n,force=false){
+  const e=sheetEvent(); if(!e||!(n>=0&&n<=99)) return;
+  e.pl=(!force&&e.pl===n)?undefined:n;
+  if(!M.roster[e.team].includes(n)) M.roster[e.team]=sortNums([...M.roster[e.team],n]);
+  save(); renderAll(); renderSheetNums(); armTimer(SHEET_MS);
+}
+$('sheetNums').addEventListener('click',ev=>{ const b=ev.target.closest('.nb'); if(b) pickNum(+b.dataset.n); });
+$('sheetNums').addEventListener('focusin',ev=>{ if(ev.target.id==='addNum') clearTimeout(zoneTimer); });
+$('sheetNums').addEventListener('keydown',ev=>{ if(ev.target.id==='addNum'&&ev.key==='Enter'){ ev.preventDefault(); ev.target.blur(); } });
+$('sheetNums').addEventListener('change',ev=>{ if(ev.target.id==='addNum'){ const v=parseInt(ev.target.value,10); ev.target.value=''; if(!isNaN(v)) setTimeout(()=>pickNum(v,true),0); else armTimer(SHEET_MS); } });
+$('sheetRink').addEventListener('click',ev=>{ const c=ev.target.closest('.cell'); if(c) pickZone(+c.dataset.z); });
+$('sheetRink').addEventListener('keydown',ev=>{ const c=ev.target.closest('.cell'); if(c&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();pickZone(+c.dataset.z);} });
+$('skipZone').onclick=closeSheet;
+
+function evRow(e,{del=false,click=false}={}){
+  const who=e.team==='us'?'Wij':esc(M.opp);
+  return `<div class="row ${click?'click':''} ${click&&!videos[e.p]?'novid':''}" data-id="${e.id}"><span class="t num">P${e.p} ${fmt(e.t)}</span><span class="dot ${e.team}"></span>
+    <span class="what">${who}${e.pl!=null?` <span class="pl">${esc(plName(e.pl,e.team))}</span>`:''} · ${EVL[e.type]}${e.zone!=null?` <em>· ${zoneName(e.zone)}</em>`:''}</span>${del?`<button class="x" aria-label="Verwijder" data-del="${e.id}">×</button>`:''}</div>`;
+}
+function renderLive(){
+  const cnt={}; M.events.forEach(e=>{const k=e.team+'-'+e.type;cnt[k]=(cnt[k]||0)+1;});
+  document.querySelectorAll('[data-c]').forEach(s=>s.textContent=cnt[s.dataset.c]||0);
+  const last=[...M.events].sort((a,b)=>b.id-a.id).slice(0,5);
+  $('log').innerHTML=last.length?last.map(e=>evRow(e,{del:!M.example})).join(''):'<div class="empty">Nog niets gemarkeerd. Zet de camera aan, druk op Start en tik op een actie.</div>';
+}
+$('log').addEventListener('click',ev=>{ const d=ev.target.closest('[data-del]'); if(!d) return;
+  M.events=M.events.filter(e=>e.id!=d.dataset.del); save(); renderAll(); toast('Verwijderd'); });
+
+/* ---------- klok ---------- */
+function renderBoard(){
+  $('oppName').textContent=M.opp;
+  $('sUs').textContent=M.events.filter(e=>e.team==='us'&&e.type==='goal').length;
+  $('sThem').textContent=M.events.filter(e=>e.team==='them'&&e.type==='goal').length;
+  $('perLbl').textContent='P'+M.period;
+  $('playBtn').textContent=M.running?'Pauze':(M.base>0?'Verder':'Start');
+  $('playBtn').disabled=!!M.done;
+  $('endBtn').textContent=M.period>=3?'Einde wedstrijd':'Einde periode';
+  $('endBtn').disabled=!!M.done||M.example;
+  $('banner').innerHTML=M.example
+    ? `<span><b>Voorbeeldwedstrijd.</b> Bekijk het rapport, of begin je eigen wedstrijd.</span><button class="btn small primary" id="newBtn">Nieuwe wedstrijd</button>`
+    : `<span>${M.done?'<b>Afgelopen.</b> ':''}${M.events.length} acties gemarkeerd</span><button class="btn small" id="newBtn">Nieuwe wedstrijd</button>`;
+  $('newBtn').onclick=openNew;
+  renderRec();
+}
+function tick(){ const s=elapsed(); $('clock').textContent=fmt(s); $('clock').classList.toggle('over',s>=PER_LEN); }
+setInterval(tick,250);
+let wake=null;
+async function keepAwake(){ try{ wake=await navigator.wakeLock?.request('screen'); }catch(_){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&M.running) keepAwake(); });
+$('playBtn').onclick=async()=>{
+  if(M.example){ toast('Maak eerst een nieuwe wedstrijd aan.'); return; }
+  if(M.running){
+    M.base=elapsed(); M.running=false;
+    if(recorder?.state==='recording') recorder.pause();
+  } else {
+    if(!stream && !(await startCamera())){
+      toast('Klok loopt zonder video. Markeringen worden wel bewaard.',3000);
+    }
+    if(stream){
+      if(recorder?.state==='paused') recorder.resume();
+      else if(!recorder){
+        if(M.base>0) toast('Let op: de video begint nu, niet bij 00:00. Terugspringen klopt dan niet precies.',4000);
+        beginRecording();
+      }
+    }
+    M.startedAt=Date.now(); M.running=true; keepAwake();
+  }
+  save(); renderBoard(); tick();
+};
+$('endBtn').onclick=async()=>{
+  if(M.example||M.done) return;
+  const p=M.period;
+  if(M.running){ M.base=elapsed(); M.running=false; }
+  $('endBtn').disabled=true;
+  await finishRecording(p);
+  if(p>=3){ M.done=true; toast('Wedstrijd afgelopen. Bekijk het rapport.',3000); }
+  else { M.period++; M.base=0; toast(`Periode ${M.period}. Druk op Start bij de aftrap.`,3000); }
+  try{ wake?.release(); }catch(_){}
+  save(); renderAll(); tick();
+};
+
+/* ---------- nieuwe wedstrijd ---------- */
+function openNew(){
+  if(recorder){ toast('Beëindig eerst de periode'); return; }
+  if(Object.keys(files).length){ toast('Bewaar eerst de video van de vorige wedstrijd'); return; }
+  $('newPanel').hidden=false; $('newOpp').value='';
+  let last=''; try{ last=localStorage.getItem(KEY+'-roster')||''; }catch(_){}
+  $('newRoster').value=last;
+  const n=M.example?0:M.events.length;
+  $('newWarn').hidden=!n; $('newWarn').textContent=`De wedstrijd tegen ${M.opp} (${n} acties) wordt gewist. Kopieer eerst het rapport als je dat wilt bewaren.`;
+  $('newOpp').focus();
+}
+$('newCancel').onclick=()=>$('newPanel').hidden=true;
+$('newGo').onclick=()=>{
+  const raw=$('newRoster').value, us=[], names={};
+  raw.split(/[,;\n]+/).forEach(part=>{ const m=part.trim().match(/^#?(\d{1,2})\s*(.*)$/); if(m){ const n=+m[1]; us.push(n); if(m[2].trim()) names[n]=m[2].trim(); } });
+  try{ localStorage.setItem(KEY+'-roster',raw); }catch(_){}
+  M={opp:$('newOpp').value.trim()||'Tegenstander',example:false,period:1,base:0,running:false,startedAt:0,done:false,events:[],nextId:1,roster:{us:sortNums(us),them:[]},names};
+  for(const k in videos){ URL.revokeObjectURL(videos[k]); delete videos[k]; }
+  save(); $('newPanel').hidden=true; buildCols(); renderAll(); tick(); showTab('live');
+};
+
+/* ---------- rapport ---------- */
+let perF='all', heatF='us-win';
+const HEAT=[['us-win','Onze veroveringen'],['us-loss','Ons balverlies'],['them-break','Hun doorbraken'],['them-shot','Hun schoten'],['us-shot','Onze schoten']];
+const evts=()=>M.events.filter(e=>perF==='all'||e.p==perF);
+const count=(list,team,type)=>list.filter(e=>e.team===team&&e.type===type).length;
+function topZone(list,fn,by='zone'){
+  const c={}; list.filter(fn).forEach(e=>{ if(e.zone==null)return; const k=by==='lane'?Math.floor(e.zone/3):e.zone; c[k]=(c[k]||0)+1; });
+  let best=null,n=0,tot=0; for(const k in c){ tot+=c[k]; if(c[k]>n){n=c[k];best=+k;} } return {best,n,tot};
+}
+function insights(list){
+  const out=[], O=M.opp;
+  const su=count(list,'us','shot')+count(list,'us','goal'), st=count(list,'them','shot')+count(list,'them','goal');
+  if(su||st) out.push([su>=st?'good':'bad',`Schoten ${su} tegen ${st}${su>st?': wij creëren meer.':su<st?`: ${O} komt vaker tot schieten.`:'.'}`]);
+  const hi=list.filter(e=>e.team==='us'&&e.type==='win'&&e.zone!=null&&e.zone%3===2).length, wins=count(list,'us','win');
+  if(wins) out.push(hi>=Math.max(2,wins*.35)?['good',`De druk werkt: ${hi} van ${wins} veroveringen in de aanvalsderde.`]:['bad',`Maar ${hi} van ${wins} veroveringen hoog op het veld. De druk levert nog weinig op.`]);
+  const br=topZone(list,e=>e.team==='them'&&e.type==='break','lane');
+  if(br.n>=2&&br.n/br.tot>=.4) out.push(['bad',`${O} speelt zich vooral via ${LANES[br.best]} uit onze druk (${br.n} van ${br.tot}). Die kant beter dichtzetten.`]);
+  const ls=topZone(list,e=>e.team==='us'&&e.type==='loss');
+  if(ls.n>=2&&ls.n/ls.tot>=.3) out.push(['bad',`We verliezen de bal het vaakst in ${zoneName(ls.best)} (${ls.n}×).`]);
+  const W=list.filter(e=>e.team==='us'&&e.type==='win');
+  if(W.length){ const conv=W.filter(w=>list.some(s=>s.team==='us'&&(s.type==='shot'||s.type==='goal')&&s.p===w.p&&s.t>w.t&&s.t-w.t<=15)).length;
+    out.push([conv/W.length>=.3?'good':'',`Na ${conv} van ${W.length} veroveringen binnen 15 seconden een schot.`]); }
+  const B=list.filter(e=>e.team==='them'&&e.type==='break'), late=B.filter(e=>e.t>=PER_LEN-300).length;
+  if(B.length>=3&&late/B.length>=.4) out.push(['bad',`${late} van ${B.length} doorbraken kwamen in de laatste 5 minuten van een periode. Vermoeidheid? Kortere shifts helpen.`]);
+  const ts=topZone(list,e=>e.team==='them'&&(e.type==='shot'||e.type==='goal'));
+  if(ts.n>=2) out.push(['',`${O} schiet het meest vanuit ${zoneName(ts.best)}.`]);
+  const danger=playerStats(list,'them').filter(s=>s.shots>=3).sort((a,b)=>b.shots-a.shots)[0];
+  if(danger) out.push(['bad',`Gevaarlijkste speler van ${O}: nummer ${danger.n} (${danger.shots} schoten, ${danger.goal} doelpunten). Extra aandacht geven.`]);
+  const loser=playerStats(list,'us').filter(s=>s.loss>=3).sort((a,b)=>b.loss-a.loss)[0];
+  if(loser) out.push(['',`${plName(loser.n)} verliest de bal het vaakst (${loser.loss}×). Even terugkijken samen.`]);
+  return out;
+}
+function playerStats(list,team){
+  const m={};
+  list.forEach(e=>{ if(e.team!==team||e.pl==null) return; const s=m[e.pl]=m[e.pl]||{n:e.pl,shot:0,goal:0,win:0,loss:0,break:0,pen:0}; s[e.type]++; });
+  return Object.values(m).map(s=>({...s,shots:s.shot+s.goal})).sort((a,b)=>a.n-b.n);
+}
+let plTeam='us';
+function renderPlayers(list){
+  $('plChips').innerHTML=[['us','Wij'],['them',M.opp]].map(([k,l])=>`<button class="chip" aria-pressed="${plTeam===k}" data-t="${k}">${esc(l)}</button>`).join('');
+  const st=playerStats(list,plTeam);
+  const cols=[['shots','Schot'],['goal','Goal'],['win','Verov.'],['loss','Verlies'],['break','Druk'],['pen','Straf']];
+  $('plHead').innerHTML=`<tr><th>Speler</th>${cols.map(c=>`<th class="n">${c[1]}</th>`).join('')}</tr>`;
+  $('plBody').innerHTML=st.length?st.map(s=>`<tr><td>${esc(plName(s.n,plTeam))}</td>${cols.map(c=>`<td class="n">${s[c[0]]||''}</td>`).join('')}</tr>`).join('')
+    :`<tr><td colspan="7" class="empty">Nog geen acties met rugnummer.</td></tr>`;
+}
+function renderReport(){
+  $('perChips').innerHTML=[['all','Hele wedstrijd'],['1','Periode 1'],['2','Periode 2'],['3','Periode 3']]
+    .map(([k,l])=>`<button class="chip" aria-pressed="${perF==k}" data-p="${k}">${l}</button>`).join('');
+  $('thOpp').textContent=M.opp;
+  const list=evts();
+  $('stats').innerHTML=EV.map(e=>{ const a=count(list,'us',e.k), b=count(list,'them',e.k);
+    const good=['shot','goal','win','break'].includes(e.k)?a>b:a<b;
+    return `<tr><td>${e.l}</td><td class="n ${a===b?'':good?'lead':'trail'}">${a}</td><td class="n ${a===b?'':good?'trail':'lead'}">${b}</td></tr>`; }).join('');
+  const ins=insights(list);
+  $('ins').innerHTML=ins.length?ins.map(([c,t])=>`<li class="${c}">${esc(t)}</li>`).join(''):'<li>Nog te weinig gemarkeerd voor conclusies. Tik ook aan waar acties gebeuren.</li>';
+  renderPlayers(list);
+  $('heatChips').innerHTML=HEAT.map(([k,l])=>`<button class="chip" aria-pressed="${heatF===k}" data-h="${k}">${l}</button>`).join('');
+  const [team,type]=heatF.split('-'), c=Array(9).fill(0);
+  list.forEach(e=>{ if(e.team===team&&(e.type===type||(type==='shot'&&e.type==='goal'))&&e.zone!=null) c[e.zone]++; });
+  const max=Math.max(1,...c), col=team==='us'?'var(--us)':'var(--them)';
+  $('heat').innerHTML=rink(c.map((n,z)=>{const b=cellBox(z); return `<rect x="${b.x+2}" y="${b.y+2}" width="${b.w-4}" height="${b.h-4}" rx="6" fill="${col}" fill-opacity="${n?0.12+0.6*n/max:0}"/>
+    <text class="cnt" x="${b.x+b.w/2}" y="${b.y+b.h/2}">${n||''}</text>`}).join(''));
+  $('copyBox').hidden=true;
+}
+$('perChips').addEventListener('click',e=>{const b=e.target.closest('[data-p]'); if(b){perF=b.dataset.p; renderReport();}});
+$('plChips').addEventListener('click',e=>{const b=e.target.closest('[data-t]'); if(b){plTeam=b.dataset.t; renderPlayers(evts());}});
+$('heatChips').addEventListener('click',e=>{const b=e.target.closest('[data-h]'); if(b){heatF=b.dataset.h; renderReport();}});
+function reportText(){
+  const list=evts(), lbl=perF==='all'?'hele wedstrijd':'periode '+perF;
+  const lines=[`Floorbal: wij – ${M.opp} (${lbl})`,`Stand: ${$('sUs').textContent}–${$('sThem').textContent}`,'Wij spelen met hoge druk. "Door de druk" = dat team speelde zich uit de druk.',''];
+  EV.forEach(e=>lines.push(`${e.l}: wij ${count(list,'us',e.k)} – zij ${count(list,'them',e.k)}`));
+  lines.push('','Wat valt op:'); insights(list).forEach(([,t])=>lines.push('- '+t));
+  [['us','Wij'],['them',M.opp]].forEach(([team,l])=>{ const st=playerStats(list,team); if(!st.length) return;
+    lines.push('',`Per speler (${l}):`);
+    st.forEach(s=>lines.push(`${plName(s.n,team)}: ${s.shots} schoten, ${s.goal} goals, ${s.win} veroveringen, ${s.loss} balverlies${s.break?`, ${s.break}× door de druk`:''}${s.pen?`, ${s.pen} straf`:''}`)); });
+  lines.push('','Geef de coach 3 korte, concrete tips voor de volgende periode.');
+  return lines.join('\n');
+}
+$('copyBtn').onclick=async()=>{
+  const txt=reportText();
+  try{ await navigator.clipboard.writeText(txt); toast('Rapport gekopieerd'); }
+  catch(_){ const box=$('copyBox'); box.textContent=txt; box.hidden=false; const r=document.createRange(); r.selectNodeContents(box); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Tekst geselecteerd, kopieer handmatig'); }
+};
+
+/* ---------- terugkijken ---------- */
+let revF='all', curP=null, revPl='';
+$('revPl').addEventListener('change',e=>{ revPl=e.target.value; renderReview(); });
+function renderReview(){
+  $('vids').innerHTML=[1,2,3].map(p=>`<label for="vf${p}"><b>Periode ${p}</b><span class="${videos[p]?'ok':''}">${videos[p]?'klaar':'kies bestand'}</span><input type="file" id="vf${p}" data-p="${p}" accept="video/*" hidden></label>`).join('');
+  $('revChips').innerHTML=[['all','Alles'],['us','Wij'],['them',M.opp],['goal','Doelpunten'],['shot','Schoten']]
+    .map(([k,l])=>`<button class="chip" aria-pressed="${revF===k}" data-r="${k}">${esc(l)}</button>`).join('');
+  const opts=[['','Iedereen'],...M.roster.us.map(n=>['us:'+n,'Wij '+plName(n)]),...M.roster.them.map(n=>[`them:${n}`,`${M.opp} #${n}`])];
+  if(!opts.some(o=>o[0]===revPl)) revPl='';
+  $('revPl').innerHTML=opts.map(([v,l])=>`<option value="${v}" ${v===revPl?'selected':''}>${esc(l)}</option>`).join('');
+  const [pt,pn]=revPl?revPl.split(':'):[];
+  const list=M.events.filter(e=>(revF==='all'||e.team===revF||e.type===revF)&&(!revPl||(e.team===pt&&e.pl===+pn)));
+  $('revList').innerHTML=list.length?list.map(e=>evRow(e,{click:true})).join(''):'<div class="empty">Geen markeringen.</div>';
+}
+$('vids').addEventListener('change',e=>{ const inp=e.target; const f=inp.files?.[0]; if(!f) return;
+  const p=inp.dataset.p; if(videos[p]) URL.revokeObjectURL(videos[p]); videos[p]=URL.createObjectURL(f); renderReview(); toast(`Video periode ${p} geladen`); });
+$('revChips').addEventListener('click',e=>{const b=e.target.closest('[data-r]'); if(b){revF=b.dataset.r; renderReview();}});
+$('revList').addEventListener('click',ev=>{ const r=ev.target.closest('.row'); if(!r) return;
+  const e=M.events.find(x=>x.id==r.dataset.id); if(!e) return;
+  if(!videos[e.p]){ toast(`Kies eerst de video van periode ${e.p}`); return; }
+  const v=$('revVid'); v.hidden=false;
+  const go=()=>{ v.currentTime=Math.max(0,e.t-PRE_ROLL); v.play().catch(()=>{}); };
+  if(curP!==e.p){ curP=e.p; v.src=videos[e.p]; v.addEventListener('loadedmetadata',go,{once:true}); } else go();
+  v.scrollIntoView({behavior:'smooth',block:'center'}); });
+
+/* ---------- tabs ---------- */
+function showTab(t){
+  ['live','rapport','terug'].forEach(k=>{ $('v-'+k).hidden=k!==t; $('tab-'+k).setAttribute('aria-selected',k===t); });
+  if(t==='rapport') renderReport(); if(t==='terug') renderReview();
+}
+['live','rapport','terug'].forEach(k=>$('tab-'+k).onclick=()=>showTab(k));
+function renderAll(){ renderBoard(); renderLive(); if(!$('v-rapport').hidden) renderReport(); if(!$('v-terug').hidden) renderReview(); }
+buildCols(); renderAll(); tick();
+</script>
+</body>
+</html>
